@@ -1,35 +1,48 @@
-#define UART0 0x101f1000
-#define COLOR 0xff
-#define CHAR_LCD 0x1008000
-#define KMI0 0x10006000
-#define KMI1 0x10007000
+#include "uart.h"
+#include "asm.h"
 
-#define LCD_CLEAR 1
-#define LCD_RETURN (1<<1)
-#define LCD_ENTRYMODE(d,s) (1<<2) | (d << 1) | s
-#define LCD_DISPLAY(d,c,b) (1<<3) | (d << 2) | (c << 1) | b
-#define LCD_SHIFT(c,d) (1<<4) | (c << 3) | (d << 2)
-#define LCD_SETFUNC(l,n,f) (1<<5) | (l << 4) | (n << 3) | (f << 2)
-#define LCD_SETGCRAM(addr) (1 << 6) | (addr && 0x3f) /*Must check addr size when calling*/
-#define LCD_SETDDRAM(addr) (1 << 7) | (addr && 0x7f)
+#define KMI0 (volatile unsigned int *) 0x10006000
+#define KMI1 (volatile unsigned int *) 0x10007000
 
+#define SPSR_PREFIX 0x10
 
-typedef struct char_lcd{
-    unsigned int CHAR_COM;
-    unsigned int CHAR_DAT;
-    unsigned int CHAR_RD;
-    unsigned int CHAR_RAW;
-    unsigned int CHAR_MASK;
-    unsigned int CHAR_STAT;
-}charlcd,*pcharlcd;
+enum CPSRmode{
+    User = 0,
+    FIQ,
+    IRQ,
+    Supervisor,
+    Monitor,
+    Abort,
+    Hyp,
+    Undefined,
+    System
+};
 
-int main(void){ 
-    volatile char * key = KMI0;
-    volatile char * stdio = UART0;
-    while(1){
-        if (key){
-            *stdio = *key;
-        }
+void memset(void * dest, char val, unsigned int count){
+    for (unsigned int i = 0;i <count;i++){
+            ((char*)dest)[i] = val;
+    }
+}
+
+int puts(char* buf){
+    while (*buf && (uartfr_check_flag(TXFF) == 0)){
+        *(char*)UART0 = (*buf);
+        buf++;
     }
     return 0;
+}
+
+int main(void){ 
+    activate();
+    setmsr(User+SPSR_PREFIX);
+    int msr = getmsr();
+    puts("this\n");
+    puts("is\n");
+    puts("test\n");
+}
+
+void usermain(void){
+    puts("usermode test\n");
+    test();
+    while(1);
 }
