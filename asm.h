@@ -1,4 +1,5 @@
-void activate(void);
+void activate(void*);
 int getmsr(void);
 void setmsr(int);
-void test();
+void test(void);
+void syscall();
